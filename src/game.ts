@@ -1,14 +1,10 @@
-import Piece from 'piece';
+import { Store } from 'redux';
+import { Block, PieceDefinitions, GameState, GetRandomPiece } from 'models';
 
-interface Block {
-	color: string,
-	x: number,
-	y: number
-}
+import * as Actions from 'actions';
 
 export default class game {
 
-	private pieces: Piece[]
 	private canvas: HTMLCanvasElement
 	private ctx: CanvasRenderingContext2D
 
@@ -20,12 +16,17 @@ export default class game {
 	private tempX = 0;
 	private tempMaxX = 9;
 
-	constructor() {
+	constructor(private store: Store<any>) {
+
+		store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}))
+
 		setInterval(() => {
-			if (this.tempY+1 < this.tempMaxY)
+			if (this.tempY+1 < this.tempMaxY) {
 				this.tempY++;
-			else
+			} else {
+				store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}))
 				this.tempY = 0;
+			}
 		}, 500);
 
 
@@ -70,16 +71,15 @@ export default class game {
 		this.drawGameBoard()
 		
 		let previewColor = 'rgba(221, 221, 221, 0.6)';
-		this.drawBlock({ color: previewColor, x: this.tempX, y: this.tempMaxY-1 })
-		this.drawBlock({ color: previewColor, x: this.tempX+1, y: this.tempMaxY-1 })
-		this.drawBlock({ color: previewColor, x: this.tempX+2, y: this.tempMaxY-1 })
-		this.drawBlock({ color: previewColor, x: this.tempX+1, y: this.tempMaxY })
-
-		this.drawBlock({ color: 'red', x: this.tempX, y: this.tempY })
-		this.drawBlock({ color: 'red', x: this.tempX+1, y: this.tempY })
-		this.drawBlock({ color: 'red', x: this.tempX+2, y: this.tempY })
-		this.drawBlock({ color: 'red', x: this.tempX+1, y: this.tempY + 1 })
-
+		let state = this.store.getState() as GameState;
+		
+		state.activePiece.blocks.forEach((value, index) => {
+			this.drawBlock({ 
+				color: value.color,
+				x: value.x + this.tempX,
+				y: value.y + this.tempY
+			});
+		});
 	}
 
 	private setupCanvas(canvas: HTMLCanvasElement) {
@@ -132,6 +132,9 @@ export default class game {
 		let h = this.blockSize;
 
 		this.ctx.fillRect(x, y, w, h);
+		// the stroke extends from the middle of the line (not inner or outer rect) and 
+		// there is no way to change it. so X +/- lineWidth/2 should force the stroke
+		// to be inner.
 		this.ctx.strokeRect(x + lineWidth/2, y + lineWidth/2, w - lineWidth/2, h - lineWidth/2);
 	}
 }
