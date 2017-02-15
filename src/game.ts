@@ -1,5 +1,6 @@
 import { Store } from 'redux';
 import { Block, PieceDefinitions, GameState, GetRandomPiece } from 'models';
+import * as _ from 'lodash';
 
 import * as Actions from 'actions';
 
@@ -9,23 +10,20 @@ export default class game {
 	private ctx: CanvasRenderingContext2D
 
 	private blockSize: number = 30
-
 	private keyPressable = true;
-	private tempY = 0;
-	private tempMaxY = 19;
-	private tempX = 0;
-	private tempMaxX = 9;
 
 	constructor(private store: Store<any>) {
 
 		store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}))
 
 		setInterval(() => {
-			if (this.tempY+1 < this.tempMaxY) {
-				this.tempY++;
+			let state = store.getState() as GameState;
+			
+			if (_.max(state.activePiece.blocks.map(b => b.y)) < 19) {
+				store.dispatch(Actions.MoveActivePieceDown({}));
 			} else {
-				store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}))
-				this.tempY = 0;
+				store.dispatch(Actions.PieceHitGround({}));
+				store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}));
 			}
 		}, 500);
 
@@ -34,22 +32,28 @@ export default class game {
 			let left = 37;
 			let right = 39;
 			let down = 40;
+			let space = 32;
 
 			if(!this.keyPressable) return false;
 
 			switch(e.keyCode) {
 				case left:
-					if(this.tempX > 0) this.tempX--;
+					this.store.dispatch(Actions.MoveActivePiece({direction: 'left'}))
 					this.keyPressable = false;
 					this.timeoutKeypress();
 					break;
 				case right: 
-					if(this.tempX+2 < this.tempMaxX) this.tempX++;
+					this.store.dispatch(Actions.MoveActivePiece({direction: 'right'}))
 					this.keyPressable = false;
 					this.timeoutKeypress();
 					break;
 				case down: 
-					if(this.tempY+1 < this.tempMaxY) this.tempY++;
+					store.dispatch(Actions.MoveActivePieceDown({}));
+					this.keyPressable = false;
+					this.timeoutKeypress();
+					break;
+				case space:
+					store.dispatch(Actions.RotatePiece({}));
 					this.keyPressable = false;
 					this.timeoutKeypress();
 					break;
@@ -74,11 +78,10 @@ export default class game {
 		let state = this.store.getState() as GameState;
 		
 		state.activePiece.blocks.forEach((value, index) => {
-			this.drawBlock({ 
-				color: value.color,
-				x: value.x + this.tempX,
-				y: value.y + this.tempY
-			});
+			this.drawBlock({...value});
+		});
+		state.blocks.forEach((value, index) => {
+			this.drawBlock({...value});
 		});
 	}
 

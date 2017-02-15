@@ -4,7 +4,9 @@
   "description": "",
   "main": "./src/index.js",
   "dependencies": {
+    "@types/lodash": "^4.14.52",
     "awesome-typescript-loader": "^3.0.4-rc.0",
+    "lodash": "^4.17.4",
     "node-sass": "^4.5.0",
     "redux": "^3.6.0",
     "typescript": "^2.1.6",
@@ -26,7 +28,7 @@
   },
   "scripts": {
     "start": "node_modules/.bin/webpack-dev-server --output-public-path=/build/",
-    "test": "mocha-webpack --webpack-config webpack.config.js \"tests/**/*.spec.ts\""
+    "test": "mocha-webpack --webpack-config webpack.config.js --watch \"tests/**/*.spec.ts\""
   },
   "author": "Matt Waggs",
   "license": "ISC"
