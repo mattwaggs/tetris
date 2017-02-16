@@ -84,6 +84,7 @@ const reducer: {[key: string]: <A extends Action>(state: GameState, action: A) =
 	},
 
 	[Actions.ROTATE_PIECE]: (state: GameState, action: Actions.RotatePiece) => {
+		if (state.activePiece.blocks[0].color == "yellow") return state; // skip rotation on squares
 
 		let current_minX = _.min(state.activePiece.blocks.map(b=>b.x));
 		let current_maxX = _.max(state.activePiece.blocks.map(b=>b.x));
@@ -92,8 +93,23 @@ const reducer: {[key: string]: <A extends Action>(state: GameState, action: A) =
 
 		let xDiff = current_maxX - current_minX;
 		let yDiff = current_maxY - current_minY;
-		let middleX = ((xDiff % 2 == 1) ? Math.floor(xDiff / 2) : Math.ceil(xDiff / 2)) + current_minX;
-		let middleY = ((yDiff % 2 == 1) ? Math.floor(yDiff / 2) : Math.ceil(yDiff / 2)) + current_minY;
+
+		let valuesForMedianCalc = [...state.activePiece.blocks.map(b => b.x)].sort((a,b) => a - b);
+		let lowMiddleForMedianCalc = Math.floor((valuesForMedianCalc.length - 1) / 2)
+		let highMiddleForMedianCalc = Math.ceil((valuesForMedianCalc.length - 1) / 2)
+
+		let median = valuesForMedianCalc[lowMiddleForMedianCalc] + valuesForMedianCalc[highMiddleForMedianCalc] / 2;
+		let leftHeavy = state.activePiece.blocks.filter(b => b.x < median).length;
+		let rightHeavy = state.activePiece.blocks.filter(b => b.x > median).length;
+		
+		// there were issues regarding the piece being 2 blocks wide and then 3 blocks wide and then back to 2.
+		// the problem is that when using a math based solution to rotate the pieces this causes eventual drift.
+		// the drift ends up being left or right depending on the use of math.floor or math.ceil. MY solution was
+		// to find the median x value and use that to determine whether the peice should move left or right based
+		// on the number of pieces to the left or right of the median... i.e. left heavy vs right heavy
+		//let middleX = ((leftHeavy >= rightHeavy) ? Math.floor(xDiff / 2) : Math.ceil(xDiff / 2)) + current_minX;
+		let middleX = ((xDiff %2 == 1 ) ? Math.floor(xDiff / 2) : Math.ceil(xDiff / 2)) + current_minX;
+		let middleY = Math.ceil(yDiff/2) + current_minY;
 
 		let oneRadianInDeg = 180 / Math.PI;
 		let radianAmountFor90Deg = 90 / oneRadianInDeg;
@@ -104,11 +120,11 @@ const reducer: {[key: string]: <A extends Action>(state: GameState, action: A) =
 
 			return {
 				color: b.color,
-				x: Math.floor(((translatedX * Math.cos(radianAmountFor90Deg)) - (translatedY * Math.sin(radianAmountFor90Deg))) + middleX),
-				y: Math.floor(((translatedX * Math.sin(radianAmountFor90Deg)) + (translatedY * Math.cos(radianAmountFor90Deg))) + middleY),
+				x: Math.floor(((translatedX * Math.cos(radianAmountFor90Deg)) - (translatedY * Math.sin(radianAmountFor90Deg))) + middleX +.1),
+				y: Math.floor(((translatedX * Math.sin(radianAmountFor90Deg)) + (translatedY * Math.cos(radianAmountFor90Deg))) + middleY +.1),
 			}
 		});
-
+		
 		// rotations seem to move the blocks a bit :( dont let them go out of bounds
 		let newMinX = _.min(blocks.map(b => b.x));
 		let newMaxX = _.max(blocks.map(b => b.x));

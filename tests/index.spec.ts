@@ -134,18 +134,18 @@ describe("Action::ROTATE_PIECE", () => {
          * 
          * 
          * Expect rotated position to be:
-         * ...[0]...  //      [4,1]
-         * ...[1]...  //      [4,2]
-         * [3][2]...  // [3,3][4,3]
+         * ...[0]...  //      [5,2]
+         * ...[1]...  //      [5,3]
+         * [3][2]...  // [4,4][5,4]
          */
-        expect(state.activePiece.blocks[0].x).to.equal(4)
-        expect(state.activePiece.blocks[0].y).to.equal(1)
-        expect(state.activePiece.blocks[1].x).to.equal(4)
-        expect(state.activePiece.blocks[1].y).to.equal(2)
-        expect(state.activePiece.blocks[2].x).to.equal(4)
-        expect(state.activePiece.blocks[2].y).to.equal(3)
-        expect(state.activePiece.blocks[3].x).to.equal(3)
-        expect(state.activePiece.blocks[3].y).to.equal(3)
+        expect(state.activePiece.blocks[0].x).to.equal(5)
+        expect(state.activePiece.blocks[0].y).to.equal(2)
+        expect(state.activePiece.blocks[1].x).to.equal(5)
+        expect(state.activePiece.blocks[1].y).to.equal(3)
+        expect(state.activePiece.blocks[2].x).to.equal(5)
+        expect(state.activePiece.blocks[2].y).to.equal(4)
+        expect(state.activePiece.blocks[3].x).to.equal(4)
+        expect(state.activePiece.blocks[3].y).to.equal(4)
     });
 
     it("should not be rotated up and out of bounds", () => {
@@ -209,6 +209,60 @@ describe("Action::ROTATE_PIECE", () => {
         state = reducer(state, Actions.RotatePiece({}));
 
         expect(defaultBlockPosition.blocks).to.equal(state.activePiece.blocks);
+    });
+
+    it("should not mutate shape dimensions when preventing out-of-bounds", () => {
+        // turns out this issue was caused by Math.floor(0.999999999...) = 0
+        // added +.1 before the floor to fix this...
+
+        let piece = PieceDefinitions.J
+        var state = reducer(null, Actions.SetActivePiece({piece}))
+
+        for (var i = 0; i < 4; i++) { // move the piece all the way to the side
+            state = reducer(state, Actions.MoveActivePieceDown({}));
+            state = reducer(state, Actions.MoveActivePiece({direction: 'left'}))
+        }
+
+        // get the piece against the wall in a way that "should have" caused it to go out of bounds on rotation
+        state = reducer(state, Actions.RotatePiece({}));
+        state = reducer(state, Actions.MoveActivePiece({direction: 'left'}))
+        state = reducer(state, Actions.RotatePiece({}));
+
+        /*
+         * Default position should be:
+         * ...[0]...  //      [1,4]
+         * ...[1]...  //      [1,5]
+         * [3][2]...  // [0,6][1,6]
+         * 
+         * Rotated position should be:
+         * .........  //      
+         * [3]......  // [0,5]
+         * [2][1][0]  // [0,6][1,6][2,6]
+         */
+        expect(state.activePiece.blocks[0].x).to.equal(2)
+        expect(state.activePiece.blocks[0].y).to.equal(6)
+        expect(state.activePiece.blocks[1].x).to.equal(1)
+        expect(state.activePiece.blocks[1].y).to.equal(6)
+        expect(state.activePiece.blocks[2].x).to.equal(0)
+        expect(state.activePiece.blocks[2].y).to.equal(6)
+        expect(state.activePiece.blocks[3].x).to.equal(0)
+        expect(state.activePiece.blocks[3].y).to.equal(5)
+    });
+
+    it("should not drift left or right when rotating full 360", () => {
+        let piece = PieceDefinitions.J
+        var state = reducer(null, Actions.SetActivePiece({piece}))
+        
+        let originalXValues = [...state.activePiece.blocks.map(b => b.x)];
+
+        for (var i = 0; i < 4; i++) { // move the piece all the way to the side
+            state = reducer(state, Actions.MoveActivePieceDown({}));
+            state = reducer(state, Actions.RotatePiece({}));
+        }
+
+        for (var i = 0; i < state.activePiece.blocks.length; i++) {
+            expect(state.activePiece.blocks[i].x).to.equal(originalXValues[i]);
+        }
     });
 });
 

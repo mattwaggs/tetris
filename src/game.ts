@@ -11,12 +11,14 @@ export default class game {
 
 	private blockSize: number = 30
 	private keyPressable = true;
+	private gravityInterval: any;
 
 	constructor(private store: Store<any>) {
 
+		(window as any).store = store;
 		store.dispatch(Actions.SetActivePiece({piece: GetRandomPiece()}))
 
-		setInterval(() => {
+		this.gravityInterval = setInterval(() => {
 			let state = store.getState() as GameState;
 			
 			if (_.max(state.activePiece.blocks.map(b => b.y)) < 19) {
@@ -33,6 +35,7 @@ export default class game {
 			let right = 39;
 			let down = 40;
 			let space = 32;
+			let p = 80;
 
 			if(!this.keyPressable) return false;
 
@@ -56,6 +59,13 @@ export default class game {
 					store.dispatch(Actions.RotatePiece({}));
 					this.keyPressable = false;
 					this.timeoutKeypress();
+					break;
+				case p:
+					//store.dispatch(Actions.RotatePiece({}));
+					this.keyPressable = false;
+					this.timeoutKeypress();
+
+					clearInterval(this.gravityInterval)
 					break;
 				default: 
 					break;
