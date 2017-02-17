@@ -21,6 +21,11 @@ export default class game {
 		this.gravityInterval = setInterval(() => {
 			let state = store.getState() as GameState;
 			
+			/*
+			 * checks to see if block reached end of gameboard.
+			 * also undefined < any number evaluates to false, hence
+			 * no active piece causes a new piece to dispatch.
+			 */
 			if (_.max(state.activePiece.blocks.map(b => b.y)) < 19) {
 				store.dispatch(Actions.MoveActivePieceDown({}));
 			} else {
@@ -35,7 +40,6 @@ export default class game {
 			let right = 39;
 			let down = 40;
 			let space = 32;
-			let p = 80;
 
 			if(!this.keyPressable) return false;
 
@@ -59,13 +63,6 @@ export default class game {
 					store.dispatch(Actions.RotatePiece({}));
 					this.keyPressable = false;
 					this.timeoutKeypress();
-					break;
-				case p:
-					//store.dispatch(Actions.RotatePiece({}));
-					this.keyPressable = false;
-					this.timeoutKeypress();
-
-					clearInterval(this.gravityInterval)
 					break;
 				default: 
 					break;

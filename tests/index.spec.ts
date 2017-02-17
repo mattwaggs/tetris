@@ -264,6 +264,7 @@ describe("Action::ROTATE_PIECE", () => {
             expect(state.activePiece.blocks[i].x).to.equal(originalXValues[i]);
         }
     });
+
 });
 
 describe("Action:PIECE_HIT_GROUND", () => {
@@ -280,5 +281,93 @@ describe("Action:PIECE_HIT_GROUND", () => {
 
         expect(JSON.stringify(state.blocks)).to.equal(JSON.stringify(currentBlocksPosition.blocks));
         expect(state.activePiece.blocks).to.be.empty;
+    });
+
+});
+
+describe("collision checking", () => {
+
+    describe("Action:ROTATE_PIECE", () => {
+
+        it("rotating a piece should not happen if it would cause a collision", () => {
+            // set up the piece we will collide with
+            let otherPiece = PieceDefinitions.I
+            let state = reducer(null, {type: 'INIT'})
+            state = reducer(null, Actions.SetActivePiece({ piece: otherPiece }))
+            state = reducer(state, Actions.RotatePiece({}))
+            state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
+            state = reducer(state, Actions.PieceHitGround({}))
+            
+            // test piece
+            let piece = PieceDefinitions.I
+            state = reducer(state, Actions.SetActivePiece({ piece }))
+            state = reducer(state, Actions.RotatePiece({}));
+
+            // this is the important action. the state should remain unchanged.
+            let beforeCollisionState = { ...state }
+            state = reducer(state, Actions.RotatePiece({}));
+
+            expect(JSON.stringify(state)).to.equal(JSON.stringify(beforeCollisionState));
+
+        });
+    });
+
+    describe("Action:MOVE_ACTIVE_PIECE_DOWN", () => {
+
+        it("should remove activePiece blocks and add to blocks state.", () => {
+            // set up the piece we will collide with
+            let otherPiece = PieceDefinitions.I
+            let state = reducer(null, {type: 'INIT'})
+            state = reducer(null, Actions.SetActivePiece({ piece: otherPiece }))
+            state = reducer(state, Actions.RotatePiece({}))
+
+            for (var i = 0; i < 16; i++) { // move the piece all the way down
+                state = reducer(state, Actions.MoveActivePieceDown({}))
+            }
+            state = reducer(state, Actions.PieceHitGround({}))
+
+
+            // test piece
+            let piece = PieceDefinitions.I
+            state = reducer(state, Actions.SetActivePiece({ piece }))
+            for (var i = 0; i < 16; i++) { // move the piece all the way down
+                state = reducer(state, Actions.MoveActivePieceDown({}))
+            }
+
+            expect(state.activePiece.blocks).to.be.empty;
+            
+            // map to a string[] because this seems easier to test
+            let results = state.blocks.slice(4).map(b => `${b.x}-${b.y}`); 
+            expect(results[0]).to.equal('3-15');
+            expect(results[1]).to.equal('4-15');
+            expect(results[2]).to.equal('5-15');
+            expect(results[3]).to.equal('6-15');
+
+        });
+    });
+
+    describe("Action:MOVE_ACTIVE_PIECE", () => {
+
+        it("moving a piece should not happen if it would cause a collision", () => {
+            // set up the piece we will collide with
+            let otherPiece = PieceDefinitions.I
+            let state = reducer(null, {type: 'INIT'})
+            state = reducer(null, Actions.SetActivePiece({ piece: otherPiece }))
+            state = reducer(state, Actions.RotatePiece({}))
+            state = reducer(state, Actions.MoveActivePieceDown({}))
+            state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
+            state = reducer(state, Actions.PieceHitGround({}))
+            
+            // test piece
+            let piece = PieceDefinitions.I
+            state = reducer(state, Actions.SetActivePiece({ piece }))
+            state = reducer(state, Actions.RotatePiece({}));
+            state = reducer(state, Actions.MoveActivePieceDown({}))
+
+            let expectedState = { ...state }
+            state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
+
+            expect(JSON.stringify(state)).to.equal(JSON.stringify(expectedState));
+        });
     });
 });
