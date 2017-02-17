@@ -3,6 +3,8 @@ import reducer from 'game-reducer';
 import * as Actions from 'actions';
 import { PieceDefinitions } from 'models';
 
+import * as _ from 'lodash';
+
 describe("Action::SET_ACTIVE_PIECE", () => {
     it("should should set the active piece in state", () => {
         let piece = PieceDefinitions.J
@@ -368,6 +370,88 @@ describe("collision checking", () => {
             state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
 
             expect(JSON.stringify(state)).to.equal(JSON.stringify(expectedState));
+        });
+    });
+});
+
+describe("clearing rows", () => {
+    describe("Action:PIECE_HIT_GROUND", () => {
+        it("should delete any full rows", () => {
+            let state = reducer(null, { type: 'INIT' })
+
+            function repeat(cb: () => void, times: number) {
+                for (var i = 0; i < times; i++) {
+                    cb()
+                }
+            }
+
+            repeat(() => {
+                let piece = PieceDefinitions.I
+                state = reducer(state, Actions.SetActivePiece({ piece }))
+                state = reducer(state, Actions.RotatePiece({}));
+
+                repeat(() => {
+                    state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
+                }, 10);
+
+                repeat(() => {
+                    state = reducer(state, Actions.MoveActivePieceDown({}))
+                }, 20);
+
+                repeat(() => {
+                    state = reducer(state, Actions.MoveActivePiece({direction: 'left'}))
+                }, 10);
+
+                state = reducer(state, Actions.PieceHitGround({}))
+
+            }, 8);
+
+            let piece = PieceDefinitions.S
+            state = reducer(state, Actions.SetActivePiece({ piece }))
+            state = reducer(state, Actions.RotatePiece({}));
+
+            repeat(() => {
+                state = reducer(state, Actions.MoveActivePiece({direction: 'right'}))
+            }, 6);
+
+            repeat(() => {
+                state = reducer(state, Actions.MoveActivePieceDown({}))
+            }, 20);
+
+            state = reducer(state, Actions.PieceHitGround({}))
+
+            console.log(JSON.stringify(state));
+            
+
+            let minY = _.min(state.blocks.map(b => b.y));
+            let s_color = PieceDefinitions.S.blocks[0].color;
+            let minY_from_s = _.min(state.blocks.filter(b => b.color == s_color).map(b => b.y));
+
+            expect(minY).to.equal(17);
+            expect(minY_from_s).to.equal(18);
+
+            let xVals = [0,1,2,3,4,5,6,7,8,9];
+            let yVals = [19,18,17,16,15];
+
+            let possibleSquares = []  as {x: number, y: number}[];
+            xVals.forEach(x => {
+                yVals.forEach(y => {
+                    possibleSquares.push({x, y});
+                })
+            });
+
+            let filledSquares = state.blocks.map(b => { return {x: b.x, y: b.y}});
+            let emptySquares = possibleSquares.filter((p: {x: number, y: number}) => {
+                for(var s in filledSquares) {
+                    if (filledSquares[s].x == p.x && filledSquares[s].y == p.y)
+                        return true
+                };
+            });
+
+            console.log(possibleSquares);
+            console.log(emptySquares)
+            expect(emptySquares.length).to.equal(26);
+
         });
     });
 });

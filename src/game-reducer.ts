@@ -173,12 +173,40 @@ reducer[Actions.MOVE_ACTIVE_PIECE] = (state: GameState, action: Actions.MoveActi
 reducer[Actions.PIECE_HIT_GROUND] = (state: GameState, action: Actions.PieceHitGround) => {
 	let blocks = [...(state.blocks || []), ...state.activePiece.blocks];
 
+	let uniqueYValues = _.uniq(blocks.map(b=>b.y));
+	let fullRows = [] as number[];
+
+	uniqueYValues.forEach(yVal => {
+		let xValues = blocks.filter(b => b.y == yVal).map(b => b.x).sort();
+		if (_.isEqual(xValues, [0,1,2,3,4,5,6,7,8,9])) {
+			fullRows.push(yVal);
+		}
+	});
+
+	if (fullRows.length > 0) {
+		let rows = fullRows.sort((a,b) => b - a); // sort largest to smallest
+		rows.forEach(yVal => {
+			blocks = blocks
+				.filter(b => b.y != yVal)
+				.map(b => {
+					if (b.y < yVal) {
+						b.y += 1;
+					}
+					return b;
+				});
+			});
+	}
+	
 	return {
 		...state,
-		blocks,
+		blocks: blocks.filter(b => b != null),
 		activePiece: { blocks: [] as Block[] }
 	}
 };
+
+reducer['o'] = (state: GameState, action: {type: string, payload: any}) => {
+	return { ...action.payload};
+}
 
 export default <A extends Action>(state: GameState, action: A) => {
 	
