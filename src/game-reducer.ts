@@ -101,77 +101,76 @@ reducer[Actions.MOVE_ACTIVE_PIECE] = (state: GameState, action: Actions.MoveActi
 	} as GameState;
 },
 
-	reducer[Actions.ROTATE_PIECE] = (state: GameState, action: Actions.RotatePiece) => {
-		if (state.activePiece.blocks[0].color == "yellow") return state; // skip rotation on squares
+reducer[Actions.ROTATE_PIECE] = (state: GameState, action: Actions.RotatePiece) => {
+	if (state.activePiece.blocks[0].color == "yellow") return state; // skip rotation on squares
 
-		let current_minX = _.min(state.activePiece.blocks.map(b => b.x));
-		let current_maxX = _.max(state.activePiece.blocks.map(b => b.x));
-		let current_minY = _.min(state.activePiece.blocks.map(b => b.y));
-		let current_maxY = _.max(state.activePiece.blocks.map(b => b.y));
+	let current_minX = _.min(state.activePiece.blocks.map(b => b.x));
+	let current_maxX = _.max(state.activePiece.blocks.map(b => b.x));
+	let current_minY = _.min(state.activePiece.blocks.map(b => b.y));
+	let current_maxY = _.max(state.activePiece.blocks.map(b => b.y));
 
-		let xDiff = current_maxX - current_minX;
-		let yDiff = current_maxY - current_minY;
+	let xDiff = current_maxX - current_minX;
+	let yDiff = current_maxY - current_minY;
 
-		let middleX = ((xDiff % 2 == 1) ? Math.floor(xDiff / 2) : Math.ceil(xDiff / 2)) + current_minX;
-		let middleY = Math.ceil(yDiff / 2) + current_minY;
+	let middleX = ((xDiff % 2 == 1) ? Math.floor(xDiff / 2) : Math.ceil(xDiff / 2)) + current_minX;
+	let middleY = Math.ceil(yDiff / 2) + current_minY;
 
-		let oneRadianInDeg = 180 / Math.PI;
-		let radianAmountFor90Deg = 90 / oneRadianInDeg;
+	let oneRadianInDeg = 180 / Math.PI;
+	let radianAmountFor90Deg = 90 / oneRadianInDeg;
 
-		let blocks = state.activePiece.blocks.map(b => {
-			let translatedX = b.x - middleX;
-			let translatedY = b.y - middleY;
-
-			return {
-				color: b.color,
-				x: Math.floor(((translatedX * Math.cos(radianAmountFor90Deg)) - (translatedY * Math.sin(radianAmountFor90Deg))) + middleX + .1),
-				y: Math.floor(((translatedX * Math.sin(radianAmountFor90Deg)) + (translatedY * Math.cos(radianAmountFor90Deg))) + middleY + .1),
-			}
-		});
-
-		// don't let the blocks go out of bounds
-		let newMinX = _.min(blocks.map(b => b.x));
-		let newMaxX = _.max(blocks.map(b => b.x));
-
-		let newMinY = _.min(blocks.map(b => b.y));
-		let newMaxY = _.max(blocks.map(b => b.y));
-
-		let adjustedBlocks = blocks.map(b => {
-			if (newMinX < 0) {
-				b.x += Math.abs(newMinX - 0);
-			} else if (newMaxX > 9) {
-				b.x -= Math.abs(newMaxX - 9);
-			}
-
-			if (newMinY < 0) {
-				b.y += Math.abs(newMinY - 0);
-			} else if (newMaxY > 19) {
-				b.y -= Math.abs(newMaxY - 19);
-			}
-
-			return b;
-		});
-
-		// check for collisions
-		let existingBlocks = (state.blocks || []).map(b => { return `${b.x}-${b.y}` });
-		let nextActivePiece = adjustedBlocks.map(b => { return `${b.x}-${b.y}` });
-
-		if (_.intersection(existingBlocks, nextActivePiece).length > 0) {
-			// collisions do exist. return unchanged state
-			return state;
-		}
+	let blocks = state.activePiece.blocks.map(b => {
+		let translatedX = b.x - middleX;
+		let translatedY = b.y - middleY;
 
 		return {
-			...state,
-			activePiece: {
-				...state.activePiece,
-				blocks: adjustedBlocks
-			}
+			color: b.color,
+			x: Math.floor(((translatedX * Math.cos(radianAmountFor90Deg)) - (translatedY * Math.sin(radianAmountFor90Deg))) + middleX + .1),
+			y: Math.floor(((translatedX * Math.sin(radianAmountFor90Deg)) + (translatedY * Math.cos(radianAmountFor90Deg))) + middleY + .1),
 		}
-	};
+	});
+
+	// don't let the blocks go out of bounds
+	let newMinX = _.min(blocks.map(b => b.x));
+	let newMaxX = _.max(blocks.map(b => b.x));
+
+	let newMinY = _.min(blocks.map(b => b.y));
+	let newMaxY = _.max(blocks.map(b => b.y));
+
+	let adjustedBlocks = blocks.map(b => {
+		if (newMinX < 0) {
+			b.x += Math.abs(newMinX - 0);
+		} else if (newMaxX > 9) {
+			b.x -= Math.abs(newMaxX - 9);
+		}
+
+		if (newMinY < 0) {
+			b.y += Math.abs(newMinY - 0);
+		} else if (newMaxY > 19) {
+			b.y -= Math.abs(newMaxY - 19);
+		}
+
+		return b;
+	});
+
+	// check for collisions
+	let existingBlocks = (state.blocks || []).map(b => { return `${b.x}-${b.y}` });
+	let nextActivePiece = adjustedBlocks.map(b => { return `${b.x}-${b.y}` });
+
+	if (_.intersection(existingBlocks, nextActivePiece).length > 0) {
+		return state;
+	}
+
+	return {
+		...state,
+		activePiece: {
+			...state.activePiece,
+			blocks: adjustedBlocks
+		}
+	}
+};
 
 reducer[Actions.PIECE_HIT_GROUND] = (state: GameState, action: Actions.PieceHitGround) => {
-	let blocks = [...(state.blocks || []), ...state.activePiece.blocks];
+	let blocks = [ ...(state.blocks || []), ...state.activePiece.blocks ];
 
 	let uniqueYValues = _.uniq(blocks.map(b=>b.y));
 	let fullRows = [] as number[];
@@ -184,29 +183,22 @@ reducer[Actions.PIECE_HIT_GROUND] = (state: GameState, action: Actions.PieceHitG
 	});
 
 	if (fullRows.length > 0) {
-		let rows = fullRows.sort((a,b) => b - a); // sort largest to smallest
-		rows.forEach(yVal => {
-			blocks = blocks
-				.filter(b => b.y != yVal)
-				.map(b => {
-					if (b.y < yVal) {
-						b.y += 1;
-					}
-					return b;
-				});
-			});
+		fullRows.sort((a,b) => a - b)
+		.forEach(yVal => {
+			blocks = blocks.filter(b => b.y != yVal)
+						   .map(b => {
+							   if (b.y < yVal) b.y += 1;
+							   return b;
+						   });
+		});
 	}
-	
+
 	return {
 		...state,
 		blocks: blocks.filter(b => b != null),
 		activePiece: { blocks: [] as Block[] }
 	}
 };
-
-reducer['o'] = (state: GameState, action: {type: string, payload: any}) => {
-	return { ...action.payload};
-}
 
 export default <A extends Action>(state: GameState, action: A) => {
 	

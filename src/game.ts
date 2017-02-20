@@ -1,5 +1,6 @@
 import { Store } from 'redux';
 import { Block, PieceDefinitions, GameState, GetRandomPiece } from 'models';
+import reducer from 'game-reducer';
 import * as _ from 'lodash';
 
 import * as Actions from 'actions';
@@ -38,40 +39,29 @@ export default class game {
 		window.addEventListener('keydown', (e: KeyboardEvent) => {
 			let left = 37;
 			let right = 39;
+			let up = 38;
 			let down = 40;
 			let space = 32;
-
-			if(!this.keyPressable) return false;
 
 			switch(e.keyCode) {
 				case left:
 					this.store.dispatch(Actions.MoveActivePiece({direction: 'left'}))
-					this.keyPressable = false;
-					this.timeoutKeypress();
 					break;
 				case right: 
 					this.store.dispatch(Actions.MoveActivePiece({direction: 'right'}))
-					this.keyPressable = false;
-					this.timeoutKeypress();
 					break;
 				case down: 
 					store.dispatch(Actions.MoveActivePieceDown({}));
-					this.keyPressable = false;
-					this.timeoutKeypress();
 					break;
-				case space:
+				case up:
+					if(!this.keyPressable) return false;
 					store.dispatch(Actions.RotatePiece({}));
-					this.keyPressable = false;
-					this.timeoutKeypress();
+					setTimeout(() => {this.keyPressable = true}, 20);
 					break;
 				default: 
 					break;
 			}
 		});
-	}
-
-	private timeoutKeypress() {
-		setTimeout(() => {this.keyPressable = true}, 50);
 	}
 
 	public render(canvas: HTMLCanvasElement) {
@@ -81,14 +71,23 @@ export default class game {
 		this.drawBackground()
 		this.drawGameBoard()
 		
-		let previewColor = 'rgba(221, 221, 221, 0.6)';
 		let state = this.store.getState() as GameState;
-		
-		state.activePiece.blocks.forEach((value, index) => {
-			this.drawBlock({...value});
+
+		let previewBlocks = this.getPreviewOfActivePiece(state);
+
+		// draw active piece placement preview
+		previewBlocks.forEach((value, index) => {
+			this.drawBlock({ ...value, color: 'rgba(225,225,225,0.4)' });
 		});
+
+		// draw all blocks
 		state.blocks.forEach((value, index) => {
-			this.drawBlock({...value});
+			this.drawBlock(value);
+		});
+
+		// draw active piece
+		state.activePiece.blocks.forEach((value, index) => {
+			this.drawBlock(value);
 		});
 	}
 
@@ -146,5 +145,32 @@ export default class game {
 		// there is no way to change it. so X +/- lineWidth/2 should force the stroke
 		// to be inner.
 		this.ctx.strokeRect(x + lineWidth/2, y + lineWidth/2, w - lineWidth/2, h - lineWidth/2);
+	}
+
+	private getPreviewOfActivePiece(state: GameState) : Block[] {
+		let previewState = { ...state }
+
+		while(previewState.activePiece.blocks.length > 0 && _.max(previewState.activePiece.blocks.map(b => b.y)) +1 <= 19) {
+			let tempPreviewState = {
+				...previewState,
+				activePiece: {
+					blocks: previewState.activePiece.blocks.map((item: Block) => {
+						return { ...item, y: item.y + 1 }
+					})
+				}
+			}
+
+			// check for collisions
+			let existingBlocks = (tempPreviewState.blocks || []).map(b => { return `${b.x}-${b.y}` });
+			let nextActivePiece = tempPreviewState.activePiece.blocks.map(b => { return `${b.x}-${b.y}` });
+
+			if (_.intersection(existingBlocks, nextActivePiece).length > 0) {
+				break;
+			} else {
+				previewState = tempPreviewState
+			}
+		}
+
+		return previewState.activePiece.blocks;
 	}
 }
