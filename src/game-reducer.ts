@@ -1,4 +1,4 @@
-import { Block, Piece, GameState, DefaultGameState, PieceDefinitions } from 'models';
+import { Block, Piece, GameState, DefaultGameState, PieceDefinitions, GameStatus } from 'models';
 import { Action, ActionCreator } from 'typedActions';
 import * as Actions from 'actions';
 
@@ -41,6 +41,8 @@ reducer[Actions.SET_ACTIVE_PIECE] = (state: GameState, action: Actions.SetActive
 };
 
 reducer[Actions.MOVE_ACTIVE_PIECE_DOWN] = (state: GameState, action: Actions.MoveActivePieceDown) => {
+	if (state.game.status !== GameStatus.PLAYING) return state;
+
 	let maxYValue = _.max(state.activePiece.blocks.map(b => b.y));
 	if (maxYValue + 1 > 19)
 		return state;
@@ -69,6 +71,8 @@ reducer[Actions.MOVE_ACTIVE_PIECE_DOWN] = (state: GameState, action: Actions.Mov
 };
 
 reducer[Actions.MOVE_ACTIVE_PIECE] = (state: GameState, action: Actions.MoveActivePiece) => {
+	if (state.game.status !== GameStatus.PLAYING) return state;
+
 	let changeValue = 0;
 	let pieceMinX = _.min(state.activePiece.blocks.map(b => b.x));
 	let pieceMaxX = _.max(state.activePiece.blocks.map(b => b.x));
@@ -102,6 +106,8 @@ reducer[Actions.MOVE_ACTIVE_PIECE] = (state: GameState, action: Actions.MoveActi
 },
 
 reducer[Actions.ROTATE_PIECE] = (state: GameState, action: Actions.RotatePiece) => {
+	if (state.game.status !== GameStatus.PLAYING) return state;
+
 	if (state.activePiece.blocks[0].color == "yellow") return state; // skip rotation on squares
 
 	let current_minX = _.min(state.activePiece.blocks.map(b => b.x));
@@ -193,10 +199,113 @@ reducer[Actions.PIECE_HIT_GROUND] = (state: GameState, action: Actions.PieceHitG
 		});
 	}
 
+	let nextScore = (state.blocks.length == 0 || state.activePiece.blocks.length == 0) ? 0 :
+		(( state.game.gravitySpeed * 10 ) + ( state.game.gravitySpeed * 100 * fullRows.length))
+
 	return {
 		...state,
 		blocks: blocks.filter(b => b != null),
-		activePiece: { blocks: [] as Block[] }
+		activePiece: { blocks: [] as Block[] },
+		score: state.score + nextScore
+	}
+};
+
+
+reducer[Actions.GAME_PLAY] = (state: GameState, action: Actions.GamePlay) => {
+
+	if (state.game.status == GameStatus.GAME_OVER) return state;
+
+	return {
+		...state,
+		game: {
+			...state.game,
+			status: GameStatus.PLAYING
+		}
+	}
+};
+
+reducer[Actions.GAME_PAUSED] = (state: GameState, action: Actions.GamePaused) => {
+
+	if (state.game.status == GameStatus.GAME_OVER) return state;
+
+	return {
+		...state,
+		game: {
+			...state.game,
+			status: GameStatus.PAUSED
+		}
+	}
+};
+
+reducer[Actions.GAME_OVER] = (state: GameState, action: Actions.GameOver) => {
+	return {
+		...state,
+		game: {
+			...state.game,
+			status: GameStatus.GAME_OVER
+		}
+	}
+};
+
+reducer[Actions.GAME_RESET] = (state: GameState, action: Actions.GameReset) => {
+	return { ...DefaultGameState }
+};
+
+reducer[Actions.INCREMENT_TURN] = (state: GameState, action: Actions.IncrementTurn) => {
+	return {
+		...state,
+		game: {
+			...state.game,
+			turn: state.game.turn +1
+		}
+	}
+};
+
+reducer[Actions.SWAP_PIECE] = (state: GameState, action: Actions.SwapPiece) => {
+	if (state.game.turn === state.holding.turn) return state; // swapping is only allowed once per turn
+
+	let pieceDefinitionMap = {
+		[PieceDefinitions.I.blocks[0].color]: PieceDefinitions.I,
+		[PieceDefinitions.L.blocks[0].color]: PieceDefinitions.L,
+		[PieceDefinitions.J.blocks[0].color]: PieceDefinitions.J,
+		[PieceDefinitions.O.blocks[0].color]: PieceDefinitions.O,
+		[PieceDefinitions.S.blocks[0].color]: PieceDefinitions.S,
+		[PieceDefinitions.T.blocks[0].color]: PieceDefinitions.T,
+		[PieceDefinitions.Z.blocks[0].color]: PieceDefinitions.Z
+	};
+
+	let blockToHold = pieceDefinitionMap[state.activePiece.blocks[0].color];
+	let actionToSetActivePiece = { type: Actions.SWAP_PIECE, piece: { blocks: [ ...state.holding.blocks ] } };
+	let activePiece = reducer[Actions.SET_ACTIVE_PIECE](state, actionToSetActivePiece).activePiece;
+
+	return {
+		...state,
+		activePiece: { ...activePiece },
+		holding: {
+			...state.holding,
+			blocks: [ ...blockToHold.blocks ],
+			turn: state.game.turn
+		}
+	}
+};
+
+reducer[Actions.ADD_PIECE_TO_WAITING] = (state: GameState, action: Actions.AddPieceToWaiting) => {
+
+	let pieceToAdd = { ...action.piece };
+	let nextPieces = [ ...state.nextPieces ];
+	nextPieces.push(pieceToAdd);
+
+	return {
+		...state,
+		nextPieces: nextPieces.slice(0, 3)
+	}
+};
+
+reducer[Actions.REMOVE_PIECE_FROM_WAITING] = (state: GameState, action: Actions.RemovePieceFromWaiting) => {
+
+	return {
+		...state,
+		nextPieces: state.nextPieces.slice(1, 3)
 	}
 };
 

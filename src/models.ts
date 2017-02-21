@@ -87,12 +87,37 @@ export const GetRandomPiece = () => {
 	}
 }
 
+export enum GameStatus { NOT_STARTED, PLAYING, PAUSED, GAME_OVER }
+
+export interface Game {
+	status: GameStatus,
+	gravitySpeed: number,
+	turn: number
+}
+
+export interface HoldingState {
+	blocks: Block[],
+	turn: number
+}
+
 export interface GameState {
+	game: Game,
+	score: number,
 	activePiece: Piece,
 	blocks: Block[],
+	holding: HoldingState,
+	nextPieces: Piece[]
 }
 
 export const DefaultGameState : GameState = {
+	game: { 
+		status: GameStatus.NOT_STARTED,
+		gravitySpeed: 1,
+		turn: 0
+	},
+	score: 0,
 	activePiece: { blocks: [] },
-	blocks: []
+	blocks: [],
+	nextPieces: [],
+	holding: { blocks: [], turn: null }
 }
